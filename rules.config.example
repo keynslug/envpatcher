@@ -1,0 +1,11 @@
+[
+
+    {inets, [
+        {some_value, {ref, env_patcher, [some_value]}}
+    ]},
+
+    {sasl, [
+        {some_value, {ref, env_patcher, [error_logger]}}
+    ]}
+
+].

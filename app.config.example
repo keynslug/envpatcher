@@ -1,0 +1,8 @@
+[
+    {sasl, []},
+    
+    {env_patcher, [
+        {error_logger, false},
+        {some_value, 42}
+    ]}
+].

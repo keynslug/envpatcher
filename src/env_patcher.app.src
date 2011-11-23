@@ -1,0 +1,17 @@
+{application, env_patcher, [
+
+    {description, "Environment variables rule-driven injector"},
+    {vsn, "0.1"},
+    {mod, {env_patcher_app, []}},
+    {registered, [
+        env_patcher, 
+        env_patcher_app
+    ]},
+    {env, []},
+
+    {applications, [
+        kernel,
+        stdlib
+    ]}
+
+]}.
