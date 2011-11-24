@@ -21,7 +21,17 @@ The rules are located in `rules.config` by default and are very self-descriptive
 ].
 ```
 
-Given the first rule you declares that application `inets` will be told that its enviroment variable `some_value` should be equal to one under application `env_patcher` at `{some_value, Value}`. The same story with the second rule for application `sasl`.
+Given the first rule you declare that the application `inets` will be told that its enviroment variable `some_value` should be equal to one under application `env_patcher` at `{some_value, Value}`. The same story with the second rule but for the application `sasl`.
+
+You may specify fixed values too:
+
+``` erlang
+[
+    {inets, [
+        {some_value, {value, 42}}
+    ]}
+].
+```
 
 Consult sample configuration files in the repository for the details you are intrested in.
 

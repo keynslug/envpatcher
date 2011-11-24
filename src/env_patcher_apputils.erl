@@ -1,4 +1,4 @@
--module(core_apputils).
+-module(env_patcher_apputils).
 
 -include_lib("kernel/include/file.hrl").
 
@@ -17,7 +17,7 @@
 %% Options
 
 options({inherit, Name}) ->
-    core_props:get([Name], application:get_all_env(), []);
+    env_patcher_props:get([Name], application:get_all_env(), []);
 
 options(global) ->
     application:get_all_env().

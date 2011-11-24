@@ -1,4 +1,4 @@
--module(core_props).
+-module(env_patcher_props).
 
 -export([
     get/2,

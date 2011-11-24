@@ -8,7 +8,7 @@
 %% Application startup
 
 start() ->
-    core_apputils:start_dependencies(?MODULE),
+    env_patcher_apputils:start_dependencies(?MODULE),
     application:start(?MODULE).
 
 stop() ->
@@ -20,8 +20,8 @@ init(_) ->
     Ok = {ok, {{one_for_one, 1, 1}, []}},
     process_flag(trap_exit, true),
     try
-        Globals = core_apputils:options(global),
-        Filename = core_props:get([filename], Globals, "rules.config"),
+        Globals = env_patcher_apputils:options(global),
+        Filename = env_patcher_props:get([filename], Globals, "rules.config"),
         Rules = load_rules(Filename),
         ok = inject_options(Rules),
         Ok
@@ -75,17 +75,18 @@ do_inject_options({_Key, []}, Options, _) ->
     Options;
 
 do_inject_options({Key, Value = [{_, _} | _]}, Options, Gather) ->
-    Sub = core_props:get([Key], Options, []),
+    Sub = env_patcher_props:get([Key], Options, []),
     case do_inject_options(Value, Sub, Gather) of
         Injected when is_list(Injected) ->
-            core_props:set([Key], Injected, Options);
+            env_patcher_props:set([Key], Injected, Options);
         Error ->
             Error
     end;
 
 do_inject_options({Key, Value}, Options, Gather) ->
-    case core_props:get([Key], Options, surely_undefined) of
-        surely_undefined ->
+    Unique = make_ref(),
+    case env_patcher_props:get([Key], Options, Unique) of
+        Unique ->
             do_inject_option(Key, Value, Options, Gather);
         _ ->
             Options
@@ -95,16 +96,17 @@ do_inject_options(Unexpected, _, _) ->
     {error, {unexpected_construct, Unexpected}}.
 
 do_inject_option(Key, {ref, RefAppName, Path = [_ | _]}, Options, Gather) ->
+    Unique = make_ref(),
     RefOptions = Gather(RefAppName),
-    case core_props:get(Path, RefOptions, surely_undefined) of
-        surely_undefined -> 
+    case env_patcher_props:get(Path, RefOptions, Unique) of
+        Unique -> 
             {error, {reference_undefined, RefAppName, Path}};
         Value ->
-            core_props:set([Key], Value, Options)
+            env_patcher_props:set([Key], Value, Options)
     end;
 
 do_inject_option(Key, {value, Value}, Options, _) ->
-    core_props:set([Key], Value, Options);
+    env_patcher_props:set([Key], Value, Options);
 
 do_inject_option(_Key, Unexpected, _, _) ->
     {error, {unexpected_construct, Unexpected}}.
@@ -173,7 +175,7 @@ injection_test() ->
     
     Result = inject_options(
         Rules, 
-        fun (App) -> core_props:get([App], Was, []) end, 
+        fun (App) -> env_patcher_props:get([App], Was, []) end, 
         fun 
             (app1, Options) -> ?assertEqual([{enabled, false}], Options);
             (app2, Options) -> ?assertEqual([
@@ -211,7 +213,7 @@ failures_test() ->
     ],
     
     Was = [ {app1, []}, {app2, []} ],
-    Gather = fun (App) -> core_props:get([App], Was, []) end,
+    Gather = fun (App) -> env_patcher_props:get([App], Was, []) end,
     Scatter = fun (_, _) -> ok end,
     ?assertEqual({error, {unexpected_construct, {ref, [enable]}}}, inject_options(Rules0, Gather, Scatter)),
     ?assertEqual({error, {unexpected_construct, "wharevah"}}, inject_options(Rules1, Gather, Scatter)),
