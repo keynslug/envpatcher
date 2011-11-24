@@ -77,6 +77,8 @@ do_inject_options({_Key, []}, Options, _) ->
 do_inject_options({Key, Value = [{_, _} | _]}, Options, Gather) ->
     Sub = env_patcher_props:get([Key], Options, []),
     case do_inject_options(Value, Sub, Gather) of
+        [] ->
+            Options;
         Injected when is_list(Injected) ->
             env_patcher_props:set([Key], Injected, Options);
         Error ->
@@ -279,5 +281,20 @@ clause_test() ->
     Error = inject_options([ {app1, [ {some, {clause, {crap, there}, 42}} ]} ], Gather, fun (_, _) -> ok end),
     ?assertMatch({error, {invalid_clause, _}}, Error).
 
+
+deep_clause_test() ->
+    
+    Was = [ {app1, []}, {app2, [ {wrong, false} ]} ],
+    Gather = fun (App) -> env_patcher_props:get([App], Was, []) end,
+    Rules = [
+        {app1, [
+            {enabled, [{what, {clause, {app2, [wrong]}, {value, 42}}}]}
+        ]}
+    ],
+    
+    Result = inject_options(Rules, Gather, fun (app1, Options) -> 
+        ?assertEqual([], Options)
+    end),
+    ?assertEqual(ok, Result).
 
 -endif.
