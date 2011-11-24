@@ -105,6 +105,16 @@ do_inject_option(Key, {ref, RefAppName, Path = [_ | _]}, Options, Gather) ->
             env_patcher_props:set([Key], Value, Options)
     end;
 
+do_inject_option(Key, {clause, Clause, Value}, Options, Gather) ->
+    case check_clause(Clause, Gather) of
+        true -> 
+            do_inject_option(Key, Value, Options, Gather);
+        false ->
+            Options;
+        Error ->
+            Error
+    end;
+
 do_inject_option(Key, {value, Value}, Options, _) ->
     env_patcher_props:set([Key], Value, Options);
 
@@ -120,8 +130,22 @@ scatter_options(AppName, Options) ->
     Result = [ application:set_env(AppName, Key, Value) || {Key, Value} <- Options ],
     case lists:all(fun (E) -> E =:= ok end, Result) of
         true -> ok;
-        false -> {error, injection_failed}
+        _    -> {error, injection_failed}
     end.
+
+check_clause({AppName, Path}, Gather) ->
+    check_clause({AppName, Path, true}, Gather);
+
+check_clause({AppName, Path = [_ | _], Value}, Gather) ->
+    Unique = make_ref(),
+    Options = Gather(AppName),
+    case env_patcher_props:get(Path, Options, Unique) of
+        Value -> true;
+        _     -> false
+    end;
+
+check_clause(Invalid, _) ->
+    {error, {invalid_clause, Invalid}}.
 
 shutdown({error, Error}) ->
     Format = "env_patcher: failed to inject options due to ~800p",
@@ -218,5 +242,42 @@ failures_test() ->
     ?assertEqual({error, {unexpected_construct, {ref, [enable]}}}, inject_options(Rules0, Gather, Scatter)),
     ?assertEqual({error, {unexpected_construct, "wharevah"}}, inject_options(Rules1, Gather, Scatter)),
     ?assertEqual({error, {reference_undefined, app2, [none]}}, inject_options(Rules2, Gather, Scatter)).
+
+
+clause_test() ->
+    
+    Was = [
+        {app1, []},
+        {app2, [
+            {some, [{story, true}, {line, false}]},
+            {myname, {johnny, dillinger}},
+            {wrong, false}
+        ]},
+        {core_app, [
+            {prop, [
+                {list, [
+                    {entry, here}
+                ]}
+            ]}
+        ]}
+    ],
+    
+    Gather = fun (App) -> env_patcher_props:get([App], Was, []) end,
+    Rules = [
+        {app1, [
+            {enabled, {clause, {app2, [some, story]}, {value, true}}},
+            {disabled, {clause, {app2, [wrong]}, {value, yeah}}},
+            {where, {clause, {app2, [myname], {johnny, dillinger}}, {ref, core_app, [prop, list, entry]}}}
+        ]}
+    ],
+    
+    Result = inject_options(Rules, Gather, fun (app1, Options) -> 
+        ?assertEqual([{where, here}, {enabled, true}], Options)
+    end),
+    ?assertEqual(ok, Result),
+    
+    Error = inject_options([ {app1, [ {some, {clause, {crap, there}, 42}} ]} ], Gather, fun (_, _) -> ok end),
+    ?assertMatch({error, {invalid_clause, _}}, Error).
+
 
 -endif.

@@ -33,6 +33,15 @@ You may specify fixed values too:
 ].
 ```
 
+And from now you may specify conditional clauses in the form:
+
+``` erlang
+{some_value, {clause, {some_app, [flag]}, {value, 42}}},
+{some_value, {clause, {some_app, [complex_var], {0, any, [complex, value]}}, {ref, some_app, [another]}}}
+```
+
+They mean exactly what they say. Given the first one it says: set some value to `42` when `flag` environment variable upon application `some_app` is set to `true`. Given the second one: let some value be equal to variable `another` under application `some_app` when `complex_var` environment variable upon application `some_app` is set to `{0, any, [complex, value]}`.
+
 Consult sample configuration files in the repository for the details you are intrested in.
 
 Building and configuring
