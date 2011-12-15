@@ -21,7 +21,7 @@ init(_) ->
     process_flag(trap_exit, true),
     try
         Globals = application:get_all_env(),
-        Filename = deep_props:get([filename], Globals, "rules.config"),
+        Filename = deepprops:get([filename], Globals, "rules.config"),
         Rules = load_rules(Filename),
         ok = inject_options(Rules),
         Ok
@@ -75,19 +75,19 @@ do_inject_options({_Key, []}, Options, _) ->
     Options;
 
 do_inject_options({Key, Value = [{_, _} | _]}, Options, Gather) ->
-    Sub = deep_props:get([Key], Options, []),
+    Sub = deepprops:get([Key], Options, []),
     case do_inject_options(Value, Sub, Gather) of
         [] ->
             Options;
         Injected when is_list(Injected) ->
-            deep_props:set([Key], Injected, Options);
+            deepprops:set([Key], Injected, Options);
         Error ->
             Error
     end;
 
 do_inject_options({Key, Value}, Options, Gather) ->
     Unique = make_ref(),
-    case deep_props:get([Key], Options, Unique) of
+    case deepprops:get([Key], Options, Unique) of
         Unique ->
             do_inject_option(Key, Value, Options, Gather);
         _ ->
@@ -100,11 +100,11 @@ do_inject_options(Unexpected, _, _) ->
 do_inject_option(Key, {ref, RefAppName, Path = [_ | _]}, Options, Gather) ->
     Unique = make_ref(),
     RefOptions = Gather(RefAppName),
-    case deep_props:get(Path, RefOptions, Unique) of
+    case deepprops:get(Path, RefOptions, Unique) of
         Unique -> 
             {error, {reference_undefined, RefAppName, Path}};
         Value ->
-            deep_props:set([Key], Value, Options)
+            deepprops:set([Key], Value, Options)
     end;
 
 do_inject_option(Key, {clause, Clause, Value}, Options, Gather) ->
@@ -118,7 +118,7 @@ do_inject_option(Key, {clause, Clause, Value}, Options, Gather) ->
     end;
 
 do_inject_option(Key, {value, Value}, Options, _) ->
-    deep_props:set([Key], Value, Options);
+    deepprops:set([Key], Value, Options);
 
 do_inject_option(_Key, Unexpected, _, _) ->
     {error, {unexpected_construct, Unexpected}}.
@@ -141,7 +141,7 @@ check_clause({AppName, Path}, Gather) ->
 check_clause({AppName, Path = [_ | _], Value}, Gather) ->
     Unique = make_ref(),
     Options = Gather(AppName),
-    case deep_props:get(Path, Options, Unique) of
+    case deepprops:get(Path, Options, Unique) of
         Value -> true;
         _     -> false
     end;
@@ -217,7 +217,7 @@ injection_test() ->
     
     Result = inject_options(
         Rules, 
-        fun (App) -> deep_props:get(App, Was, []) end, 
+        fun (App) -> deepprops:get(App, Was, []) end, 
         fun 
             (app1, Options) -> ?assertEqual([{enabled, false}], Options);
             (app2, Options) -> ?assertEqual([
@@ -255,7 +255,7 @@ failures_test() ->
     ],
     
     Was = [ {app1, []}, {app2, []} ],
-    Gather = fun (App) -> deep_props:get(App, Was, []) end,
+    Gather = fun (App) -> deepprops:get(App, Was, []) end,
     Scatter = fun (_, _) -> ok end,
     ?assertEqual({error, {unexpected_construct, {ref, [enable]}}}, inject_options(Rules0, Gather, Scatter)),
     ?assertEqual({error, {unexpected_construct, "wharevah"}}, inject_options(Rules1, Gather, Scatter)),
@@ -280,7 +280,7 @@ clause_test() ->
         ]}
     ],
     
-    Gather = fun (App) -> deep_props:get(App, Was, []) end,
+    Gather = fun (App) -> deepprops:get(App, Was, []) end,
     Rules = [
         {app1, [
             {enabled, {clause, {app2, [some, story]}, {value, true}}},
@@ -301,7 +301,7 @@ clause_test() ->
 deep_clause_test() ->
     
     Was = [ {app1, []}, {app2, [ {wrong, false} ]} ],
-    Gather = fun (App) -> deep_props:get(App, Was, []) end,
+    Gather = fun (App) -> deepprops:get(App, Was, []) end,
     Rules = [
         {app1, [
             {enabled, [{what, {clause, {app2, [wrong]}, {value, 42}}}]}
