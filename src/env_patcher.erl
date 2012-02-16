@@ -136,7 +136,12 @@ scatter_options(AppName, Options) ->
     end.
 
 check_clause({AppName, Path}, Gather) ->
-    check_clause({AppName, Path, true}, Gather);
+    Unique = make_ref(),
+    Options = Gather(AppName),
+    case deepprops:get(Path, Options, Unique) of
+        Unique -> false;
+        _      -> true
+    end;
 
 check_clause({AppName, Path = [_ | _], Value}, Gather) ->
     Unique = make_ref(),
